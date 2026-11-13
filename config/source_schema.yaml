@@ -1,0 +1,61 @@
+# Canonical Baseline Schema Definitions for SchemaGuard
+# Defines target tables, expected columns, constraints, and data types
+
+version: "1.0"
+
+schemas:
+  customers:
+    description: "Customer master dataset containing account credentials and registration dates."
+    primary_key:
+      - "customer_id"
+    columns:
+      customer_id:
+        type: "int64"
+        nullable: false
+        description: "Primary key identifier for customer."
+      customer_name:
+        type: "string"
+        nullable: false
+        description: "Customer full legal or business name."
+      email:
+        type: "string"
+        nullable: false
+        unique: true
+        description: "Unique email address for customer notifications."
+      created_at:
+        type: "timestamp[us]"
+        nullable: false
+        description: "Account creation timestamp in UTC (ISO-8601)."
+
+  orders:
+    description: "Transactional order records tracking customer purchases and fulfillment status."
+    primary_key:
+      - "order_id"
+    foreign_keys:
+      - column: "customer_id"
+        references:
+          table: "customers"
+          column: "customer_id"
+    columns:
+      order_id:
+        type: "int64"
+        nullable: false
+        description: "Primary key identifier for the order."
+      customer_id:
+        type: "int64"
+        nullable: false
+        description: "Foreign key referencing customers.customer_id."
+      order_timestamp:
+        type: "timestamp[us]"
+        nullable: false
+        description: "Timestamp when the order was placed in UTC (ISO-8601)."
+      amount:
+        type: "decimal(12,2)"
+        nullable: false
+        description: "Order total monetary amount. Must be >= 0."
+        constraints:
+          min_value: 0.00
+      status:
+        type: "string"
+        nullable: false
+        description: "Current order state (e.g., PENDING, COMPLETED, CANCELLED)."

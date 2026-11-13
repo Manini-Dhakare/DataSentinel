@@ -1,0 +1,78 @@
+# Schema Evolution Policy Configuration for SchemaGuard
+# Specifies approved evolution rules, allowed type widening, and breaking change classifications
+
+version: "1.0"
+
+evolution_policy:
+  allow_compatible_evolution: true
+  auto_quarantine_breaking: true
+
+rules:
+  compatible_changes:
+    add_nullable_column:
+      enabled: true
+      require_default_null: true
+      description: "Allow adding new columns provided they are declared nullable and default to null in target storage."
+
+    safe_type_widening:
+      enabled: true
+      description: "Explicitly approved safe type widening conversions where target domain supersets source domain without loss of precision, truncation, or overflow."
+      conversion_policy_notes: >
+        Conversions must be explicitly listed below. Float-to-double is explicitly safe under IEEE 754 float32 to float64 widening.
+        Date32 to timestamp[us] is safe assuming UTC midnight start-of-day alignment.
+        Any unlisted conversion, including arbitrary date-to-timestamp without precision guarantees or integer narrowing, is rejected as breaking.
+      approved_widenings:
+        int8:
+          - "int16"
+          - "int32"
+          - "int64"
+        int16:
+          - "int32"
+          - "int64"
+        int32:
+          - "int64"
+        float:
+          - "double"
+        date32:
+          - "timestamp[us]"
+
+    add_optional_metadata:
+      enabled: true
+      description: "Allow technical or operational metadata fields that are nullable."
+      allowed_prefixes:
+        - "meta_"
+        - "_extra_"
+
+  breaking_changes:
+    remove_required_column:
+      action: "quarantine"
+      description: "Dropping or omitting any column defined as required/non-nullable in canonical schema."
+
+    narrowing_conversions:
+      action: "quarantine"
+      description: "Narrowing conversions (e.g., int64 to int32, double to float, decimal precision reduction) risk overflow or precision loss and are strictly breaking."
+
+    incompatible_or_unsupported_type_change:
+      action: "quarantine"
+      description: "Any type change not explicitly approved in safe_type_widening (e.g., string to numeric, timestamp to string, arbitrary string to boolean)."
+
+    relax_required_to_nullable:
+      action: "quarantine"
+      description: "Modifying an existing required/non-nullable contract to nullable in incoming schema."
+
+    modify_primary_key:
+      action: "quarantine"
+      description: "Altering, dropping, re-typing, or changing nullability of primary key columns."
+
+    modify_foreign_key:
+      action: "quarantine"
+      description: "Altering or violating defined relational foreign key specifications."
+
+data_validation:
+  null_value_handling:
+    separate_from_schema_nullability: true
+    description: >
+      Schema-level nullability allows or forbids the presence of null values by contract definition.
+      Actual runtime data values in every incoming batch are validated separately on a per-record level.
+      If a column is marked nullable: false in the contract, but incoming records contain null/empty values,
+      those individual records or batches are flagged as invalid and routed to quarantine even if the schema structure matches.

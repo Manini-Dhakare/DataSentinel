@@ -1,0 +1,54 @@
+# Pipeline Runtime & Operational Configuration for SchemaGuard
+
+version: "1.0"
+
+environment: "development"
+
+pipeline:
+  name: "schemaguard_pipeline"
+  batch_id_format: "uuid4"
+  timezone: "UTC"
+  timestamp_format: "%Y-%m-%dT%H:%M:%S.%fZ"
+
+storage:
+  base_dir: "data"
+  raw_dir: "data/raw"
+  generated_dir: "data/generated"
+  landing_dir: "data/raw"
+  processed_dir: "data/processed"
+  quarantine_dir: "data/quarantine"
+  reports_dir: "data/reports"
+  metadata_dir: "data/metadata"
+  metadata_db_path: "data/metadata/schemaguard_metadata.duckdb"
+
+audit_metadata:
+  add_technical_columns: true
+  columns:
+    source_file: "source_file"
+    run_id: "run_id"
+    ingested_at: "ingested_at"
+
+validation:
+  fail_fast: false
+  track_duplicates: true
+  track_invalid_records: true
+  quarantine_invalid_rows: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+monitoring:
+  dashboard:
+    enabled: true
+    port: 8501
+    host: "localhost"
+
+retries:
+  max_retries: 3
+  initial_delay_sec: 0.05
+  backoff_factor: 2.0
+  max_delay_sec: 1.0
+  jitter: true
+
